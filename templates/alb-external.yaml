@@ -1,0 +1,124 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: External, public facing load balancer, for forwarding public traffic to containers
+Parameters:
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: Launch ECS cluster in this VPC
+
+  PublicSubnets:
+    Type: List<AWS::EC2::Subnet::Id>
+    Description: Launch public load balancer into these subnets
+
+  ContainerSecurityGroupId:
+    Type: AWS::EC2::SecurityGroup::Id
+    Description: ECS Container Security Group
+
+  TLSCertificateArn:
+    Type: String
+    Description: TLS certificate ARN for HTTPS ingress
+
+  # HostedZoneName:
+  #   Type: String
+  #   Description: Route53 Hosted Zone Name, e.g. "example.com."
+
+  # HostName:
+  #   Type: String
+  #   Description: >
+  #     Public host name for ALB, e.g. "customer1". This name will be
+  #     pre-pended to the Hosted Zone Name to make "customer1.example.com." for example.
+
+Resources:
+  # Public load balancer, hosted in public subnets that is accessible
+  # to the public, and is intended to route traffic to one or more public
+  # facing services. This is used for accepting traffic from the public
+  # internet and directing it to public facing microservices
+  PublicLoadBalancerSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Access to the public facing load balancer
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        # Allow access to ALB from anywhere on the internet
+        - CidrIp: 0.0.0.0/0
+          IpProtocol: "-1"
+
+  EcsSecurityGroupIngressFromPublicALB:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      Description: Ingress from the public ALB
+      GroupId: !Ref ContainerSecurityGroupId
+      IpProtocol: "-1"
+      SourceSecurityGroupId: !Ref PublicLoadBalancerSG
+
+  PublicLoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Scheme: internet-facing
+      LoadBalancerAttributes:
+        - Key: idle_timeout.timeout_seconds
+          Value: "30"
+      Subnets: !Ref PublicSubnets
+      SecurityGroups: [!Ref PublicLoadBalancerSG]
+
+  # PublicLoadBalancerRecordSetGroup:
+  #   Type: AWS::Route53::RecordSetGroup
+  #   Properties:
+  #     HostedZoneName: !Ref HostedZoneName
+  #     Comment: Load Balancer alias record
+  #     RecordSets:
+  #       - Name: !Sub ${HostName}.${HostedZoneName}
+  #         Type: A
+  #         AliasTarget:
+  #           HostedZoneId: !GetAtt PublicLoadBalancer.CanonicalHostedZoneID
+  #           DNSName: !GetAtt PublicLoadBalancer.DNSName
+
+  # A dummy target group is used to setup the ALB to just drop traffic
+  # initially, before any real service target groups have been added.
+  DummyTargetGroupPublic:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      HealthCheckIntervalSeconds: 6
+      HealthCheckPath: /
+      HealthCheckProtocol: HTTP
+      HealthCheckTimeoutSeconds: 5
+      HealthyThresholdCount: 2
+      Port: 80
+      Protocol: HTTP
+      UnhealthyThresholdCount: 2
+      VpcId: !Ref VpcId
+
+  PublicLoadBalancerListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+        - TargetGroupArn: !Ref "DummyTargetGroupPublic"
+          Type: "forward"
+      LoadBalancerArn: !Ref PublicLoadBalancer
+      Certificates:
+        - CertificateArn: !Ref TLSCertificateArn
+      Port: 443
+      Protocol: HTTPS
+
+  HTTPlistener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+        - Type: redirect
+          RedirectConfig:
+            Protocol: HTTPS
+            Host: "#{host}"
+            Query: "#{query}"
+            Path: /#{path}
+            Port: "443"
+            StatusCode: HTTP_301
+      LoadBalancerArn: !Ref PublicLoadBalancer
+      Port: 80
+      Protocol: HTTP
+
+Outputs:
+  PublicListener:
+    Description: The ARN of the public load balancer's Listener
+    Value: !Ref PublicLoadBalancerListener
+  ExternalUrl:
+    Description: The url of the external load balancer
+    Value: !Sub https://${PublicLoadBalancer.DNSName}
