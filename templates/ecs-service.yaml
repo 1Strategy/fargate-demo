@@ -73,6 +73,12 @@ Parameters:
   ExecutionRoleArn:
     Type: String
     Description: Task Execution Role ARN
+  EnvVar1:
+    Type: String
+    Description: First environment variable value to pass to the service
+  EnvVar2:
+    Type: String
+    Description: Second environment variable value to pass to the service 
 
 Conditions:
   HasCustomRole: !Not [!Equals [!Ref "Role", ""]]
@@ -106,6 +112,11 @@ Resources:
           Cpu: !Ref "ContainerCpu"
           Memory: !Ref "ContainerMemory"
           Image: !Ref "ImageUrl"
+          Environment:
+            - Name: TEST_ENV
+              Value: !Ref EnvVar1
+            - Name: TEST_ENV_2
+              Value: !Ref EnvVar2
           PortMappings:
             - ContainerPort: !Ref "ContainerPort"
           LogConfiguration:
