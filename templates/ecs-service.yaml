@@ -143,6 +143,7 @@ Resources:
     Type: AWS::ECS::Service
     DependsOn: ALBListenerRule
     Properties:
+      ServiceName: !Ref ServiceName
       Cluster: !Ref ECSClusterName
       LaunchType: FARGATE
       DeploymentConfiguration:
