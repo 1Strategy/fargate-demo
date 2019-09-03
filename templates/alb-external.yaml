@@ -17,16 +17,6 @@ Parameters:
     Type: String
     Description: TLS certificate ARN for HTTPS ingress
 
-  # HostedZoneName:
-  #   Type: String
-  #   Description: Route53 Hosted Zone Name, e.g. "example.com."
-
-  # HostName:
-  #   Type: String
-  #   Description: >
-  #     Public host name for ALB, e.g. "customer1". This name will be
-  #     pre-pended to the Hosted Zone Name to make "customer1.example.com." for example.
-
 Resources:
   # Public load balancer, hosted in public subnets that is accessible
   # to the public, and is intended to route traffic to one or more public
@@ -60,17 +50,7 @@ Resources:
       Subnets: !Ref PublicSubnets
       SecurityGroups: [!Ref PublicLoadBalancerSG]
 
-  # PublicLoadBalancerRecordSetGroup:
-  #   Type: AWS::Route53::RecordSetGroup
-  #   Properties:
-  #     HostedZoneName: !Ref HostedZoneName
-  #     Comment: Load Balancer alias record
-  #     RecordSets:
-  #       - Name: !Sub ${HostName}.${HostedZoneName}
-  #         Type: A
-  #         AliasTarget:
-  #           HostedZoneId: !GetAtt PublicLoadBalancer.CanonicalHostedZoneID
-  #           DNSName: !GetAtt PublicLoadBalancer.DNSName
+
 
   # A dummy target group is used to setup the ALB to just drop traffic
   # initially, before any real service target groups have been added.
@@ -99,26 +79,29 @@ Resources:
       Port: 443
       Protocol: HTTPS
 
-  HTTPlistener:
-    Type: AWS::ElasticLoadBalancingV2::Listener
-    Properties:
-      DefaultActions:
-        - Type: redirect
-          RedirectConfig:
-            Protocol: HTTPS
-            Host: "#{host}"
-            Query: "#{query}"
-            Path: /#{path}
-            Port: "443"
-            StatusCode: HTTP_301
-      LoadBalancerArn: !Ref PublicLoadBalancer
-      Port: 80
-      Protocol: HTTP
+  # HTTPlistener:
+  #   Type: AWS::ElasticLoadBalancingV2::Listener
+  #   Properties:
+  #     DefaultActions:
+  #       - Type: redirect
+  #         RedirectConfig:
+  #           Protocol: HTTPS
+  #           Host: "#{host}"
+  #           Query: "#{query}"
+  #           Path: /#{path}
+  #           Port: "443"
+  #           StatusCode: HTTP_301
+  #     LoadBalancerArn: !Ref PublicLoadBalancer
+  #     Port: 80
+  #     Protocol: HTTP
 
 Outputs:
   PublicListener:
     Description: The ARN of the public load balancer's Listener
     Value: !Ref PublicLoadBalancerListener
-  ExternalUrl:
-    Description: The url of the external load balancer
-    Value: !Sub https://${PublicLoadBalancer.DNSName}
+  ALBDNSName:
+    Description: DNS name of the ALB
+    Value: !GetAtt PublicLoadBalancer.DNSName
+  ALBHostedZoneID:
+    Description: Hosted Zone ID for the ALB
+    Value:  !GetAtt PublicLoadBalancer.CanonicalHostedZoneID

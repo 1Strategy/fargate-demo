@@ -25,6 +25,12 @@ Parameters:
   ALBListenerArn:
     Type: String
     Description: The ARN of the public load balancer's Listener
+  ALBHostedZoneID:
+    Type: String
+    Description: Hosted zone ID from the ALB
+  ALBDNSName:
+    Type: String
+    Description: DNS name from the ALB
   AutoscalingRoleArn:
     Type: String
     Description: The ARN of the role used for autoscaling
@@ -36,7 +42,7 @@ Parameters:
       will handle the traffic for this service
   ContainerPort:
     Type: Number
-    Default: 80
+    Default: 8000
     Description: What port number the application inside the docker container is binding to
   ContainerCpu:
     Type: Number
@@ -46,10 +52,14 @@ Parameters:
     Type: Number
     Default: 512
     Description: How much memory in megabytes to give the container
-  HostHeader:
+  HostedZoneName:
     Type: String
-    Default: "*"
-    Description: The host header that this service should be connected to. 
+    Description: Route53 Hosted Zone Name, e.g. "example.com."
+  HostName:
+    Type: String
+    Description: >
+      Public host name for ALB, e.g. "customer1". This name will be
+      pre-pended to the Hosted Zone Name to make "customer1.example.com." for example. 
   Priority:
     Type: Number
     Default: 1
@@ -133,7 +143,6 @@ Resources:
     Type: AWS::ECS::Service
     DependsOn: ALBListenerRule
     Properties:
-      ServiceName: !Ref "ServiceName"
       Cluster: !Ref ECSClusterName
       LaunchType: FARGATE
       DeploymentConfiguration:
@@ -165,7 +174,6 @@ Resources:
       HealthCheckTimeoutSeconds: 5
       HealthyThresholdCount: 2
       TargetType: ip
-      Name: !Ref "ServiceName"
       Port: !Ref "ContainerPort"
       Protocol: HTTP
       UnhealthyThresholdCount: 2
@@ -181,7 +189,7 @@ Resources:
       Conditions:
         - Field: host-header
           Values: 
-            - !Ref HostHeader
+            - !Sub ${HostName}.${HostedZoneName}
       ListenerArn: !Ref ALBListenerArn
       Priority: !Ref Priority
 
@@ -327,3 +335,15 @@ Resources:
       ComparisonOperator: GreaterThanOrEqualToThreshold
       AlarmActions:
         - !Ref ScaleUpPolicy
+
+  PublicLoadBalancerRecordSetGroup:
+    Type: AWS::Route53::RecordSetGroup
+    Properties:
+      HostedZoneName: !Sub ${HostedZoneName}.
+      Comment: Load Balancer alias record
+      RecordSets:
+        - Name: !Sub ${HostName}.${HostedZoneName}
+          Type: A
+          AliasTarget:
+            HostedZoneId: !Ref ALBHostedZoneID
+            DNSName: !Ref ALBDNSName
