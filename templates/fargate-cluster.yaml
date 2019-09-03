@@ -123,30 +123,30 @@ Resources:
 Outputs:
   ClusterName:
     Description: The name of the ECS cluster
-    Value: !Ref "ECSCluster"
+    Value: !Ref ECSCluster
     Export:
       Name: !Sub ${AWS::StackName}:${EnvironmentName}:ClusterName
 
   AutoscalingRole:
     Description: The ARN of the role used for autoscaling
-    Value: !GetAtt "AutoscalingRole.Arn"
+    Value: !GetAtt AutoscalingRole.Arn
     Export:
       Name: !Sub ${AWS::StackName}:${EnvironmentName}:AutoscalingRole
 
   ECSRole:
     Description: The ARN of the ECS role
-    Value: !GetAtt "ECSRole.Arn"
+    Value: !GetAtt ECSRole.Arn
     Export:
       Name: !Sub ${AWS::StackName}:${EnvironmentName}:ECSRole
 
   ECSTaskExecutionRole:
     Description: The ARN of the ECS role
-    Value: !GetAtt "ECSTaskExecutionRole.Arn"
+    Value: !GetAtt ECSTaskExecutionRole.Arn
     Export:
       Name: !Sub ${AWS::StackName}:${EnvironmentName}:ECSTaskExecutionRole
 
   ContainerSecurityGroup:
     Description: A security group used to allow Fargate containers to receive traffic
-    Value: !Ref "ContainerSecurityGroup"
+    Value: !Ref ContainerSecurityGroup
     Export:
       Name: !Sub ${AWS::StackName}:${EnvironmentName}:ContainerSecurityGroup

@@ -1,4 +1,4 @@
-AWSTemplateFormatVersion: "2010-09-09"
+AWSTemplateFormatVersion: 2010-09-09
 Description: External, public facing load balancer, for forwarding public traffic to containers
 Parameters:
   VpcId:
@@ -71,14 +71,15 @@ Resources:
     Type: AWS::ElasticLoadBalancingV2::Listener
     Properties:
       DefaultActions:
-        - TargetGroupArn: !Ref "DummyTargetGroupPublic"
-          Type: "forward"
+        - TargetGroupArn: !Ref DummyTargetGroupPublic
+          Type: forward
       LoadBalancerArn: !Ref PublicLoadBalancer
       Certificates:
         - CertificateArn: !Ref TLSCertificateArn
       Port: 443
       Protocol: HTTPS
 
+# this listener is for forwarding traffic on port 80 to port 443
   # HTTPlistener:
   #   Type: AWS::ElasticLoadBalancingV2::Listener
   #   Properties:

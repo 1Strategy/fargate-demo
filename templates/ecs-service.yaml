@@ -1,4 +1,4 @@
-AWSTemplateFormatVersion: "2010-09-09"
+AWSTemplateFormatVersion: 2010-09-09
 Description: Deploy a service on AWS Fargate, hosted in a private subnet, but accessible via a public load balancer.
 Parameters:
   EnvironmentName:
@@ -76,7 +76,6 @@ Parameters:
     Description: How many copies of the service task to run
   Role:
     Type: String
-    Default: ""
     Description:
       (Optional) An IAM role to give the service's containers if the code within needs to
       access other AWS resources like S3 buckets, DynamoDB tables, etc
@@ -105,36 +104,36 @@ Resources:
   TaskDefinition:
     Type: AWS::ECS::TaskDefinition
     Properties:
-      Family: !Ref "ServiceName"
-      Cpu: !Ref "ContainerCpu"
-      Memory: !Ref "ContainerMemory"
+      Family: !Ref ServiceName
+      Cpu: !Ref ContainerCpu
+      Memory: !Ref ContainerMemory
       NetworkMode: awsvpc
       RequiresCompatibilities:
         - FARGATE
       ExecutionRoleArn: !Ref ExecutionRoleArn
       TaskRoleArn:
         Fn::If:
-          - "HasCustomRole"
-          - !Ref "Role"
-          - !Ref "AWS::NoValue"
+          - HasCustomRole
+          - !Ref Role
+          - !Ref AWS::NoValue
       ContainerDefinitions:
-        - Name: !Ref "ServiceName"
-          Cpu: !Ref "ContainerCpu"
-          Memory: !Ref "ContainerMemory"
-          Image: !Ref "ImageUrl"
+        - Name: !Ref ServiceName
+          Cpu: !Ref ContainerCpu
+          Memory: !Ref ContainerMemory
+          Image: !Ref ImageUrl
           Environment:
             - Name: TEST_ENV
               Value: !Ref EnvVar1
             - Name: TEST_ENV_2
               Value: !Ref EnvVar2
           PortMappings:
-            - ContainerPort: !Ref "ContainerPort"
+            - ContainerPort: !Ref ContainerPort
           LogConfiguration:
-            LogDriver: "awslogs"
+            LogDriver: awslogs
             Options:
               awslogs-group: !Sub ${EnvironmentName}-service-${ServiceName}
-              awslogs-region: !Ref "AWS::Region"
-              awslogs-stream-prefix: !Ref "ServiceName"
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: !Ref ServiceName
 
   # The service. The service is a resource which allows you to run multiple
   # copies of a type of task, and gather up their logs and metrics, as well
@@ -149,17 +148,17 @@ Resources:
       DeploymentConfiguration:
         MaximumPercent: 200
         MinimumHealthyPercent: 75
-      DesiredCount: !Ref "DesiredCount"
+      DesiredCount: !Ref DesiredCount
       NetworkConfiguration:
         AwsvpcConfiguration:
           AssignPublicIp: DISABLED
           SecurityGroups: !Ref ContainerSecurityGroupId
           Subnets: !Ref PrivateSubnets
-      TaskDefinition: !Ref "TaskDefinition"
+      TaskDefinition: !Ref TaskDefinition
       LoadBalancers:
-        - ContainerName: !Ref "ServiceName"
-          ContainerPort: !Ref "ContainerPort"
-          TargetGroupArn: !Ref "TargetGroup"
+        - ContainerName: !Ref ServiceName
+          ContainerPort: !Ref ContainerPort
+          TargetGroupArn: !Ref TargetGroup
 
   # A target group. This is used for keeping track of all the tasks, and
   # what IP addresses / port numbers they have. You can query it yourself,
@@ -175,7 +174,7 @@ Resources:
       HealthCheckTimeoutSeconds: 5
       HealthyThresholdCount: 2
       TargetType: ip
-      Port: !Ref "ContainerPort"
+      Port: !Ref ContainerPort
       Protocol: HTTP
       UnhealthyThresholdCount: 2
       VpcId: !Ref VpcId
@@ -185,8 +184,8 @@ Resources:
     Type: AWS::ElasticLoadBalancingV2::ListenerRule
     Properties:
       Actions:
-        - TargetGroupArn: !Ref "TargetGroup"
-          Type: "forward"
+        - TargetGroupArn: !Ref TargetGroup
+          Type: forward
       Conditions:
         - Field: host-header
           Values: 
@@ -199,14 +198,14 @@ Resources:
     Type: AWS::ApplicationAutoScaling::ScalableTarget
     DependsOn: Service
     Properties:
-      ServiceNamespace: "ecs"
-      ScalableDimension: "ecs:service:DesiredCount"
+      ServiceNamespace: ecs
+      ScalableDimension: ecs:service:DesiredCount
       ResourceId:
         Fn::Join:
           - "/"
           - - service
             - !Ref ECSClusterName
-            - !Ref "ServiceName"
+            - !Ref ServiceName
       MinCapacity: 2
       MaxCapacity: 10
       RoleARN: !Ref AutoscalingRoleArn
@@ -220,8 +219,8 @@ Resources:
         Fn::Join:
           - "/"
           - - scale
-            - !Ref "EnvironmentName"
-            - !Ref "ServiceName"
+            - !Ref EnvironmentName
+            - !Ref ServiceName
             - down
       PolicyType: StepScaling
       ResourceId:
@@ -229,15 +228,15 @@ Resources:
           - "/"
           - - service
             - !Ref ECSClusterName
-            - !Ref "ServiceName"
-      ScalableDimension: "ecs:service:DesiredCount"
-      ServiceNamespace: "ecs"
+            - !Ref ServiceName
+      ScalableDimension: ecs:service:DesiredCount
+      ServiceNamespace: ecs
       StepScalingPolicyConfiguration:
-        AdjustmentType: "ChangeInCapacity"
+        AdjustmentType: ChangeInCapacity
         StepAdjustments:
           - MetricIntervalUpperBound: 0
             ScalingAdjustment: -1
-        MetricAggregationType: "Average"
+        MetricAggregationType: Average
         Cooldown: 60
 
   ScaleUpPolicy:
@@ -248,8 +247,8 @@ Resources:
         Fn::Join:
           - "/"
           - - scale
-            - !Ref "EnvironmentName"
-            - !Ref "ServiceName"
+            - !Ref EnvironmentName
+            - !Ref ServiceName
             - up
       PolicyType: StepScaling
       ResourceId:
@@ -257,11 +256,11 @@ Resources:
           - "/"
           - - service
             - !Ref ECSClusterName
-            - !Ref "ServiceName"
-      ScalableDimension: "ecs:service:DesiredCount"
-      ServiceNamespace: "ecs"
+            - !Ref ServiceName
+      ScalableDimension: ecs:service:DesiredCount
+      ServiceNamespace: ecs
       StepScalingPolicyConfiguration:
-        AdjustmentType: "ChangeInCapacity"
+        AdjustmentType: ChangeInCapacity
         StepAdjustments:
           - MetricIntervalLowerBound: 0
             MetricIntervalUpperBound: 15
@@ -271,7 +270,7 @@ Resources:
             ScalingAdjustment: 2
           - MetricIntervalLowerBound: 25
             ScalingAdjustment: 3
-        MetricAggregationType: "Average"
+        MetricAggregationType: Average
         Cooldown: 60
 
   # Create alarms to trigger these policies
@@ -282,8 +281,8 @@ Resources:
         Fn::Join:
           - "-"
           - - low-cpu
-            - !Ref "EnvironmentName"
-            - !Ref "ServiceName"
+            - !Ref EnvironmentName
+            - !Ref ServiceName
       AlarmDescription:
         Fn::Join:
           - " "
@@ -295,7 +294,7 @@ Resources:
       Namespace: AWS/ECS
       Dimensions:
         - Name: ServiceName
-          Value: !Ref "ServiceName"
+          Value: !Ref ServiceName
         - Name: ClusterName
           Value: !Ref ECSClusterName
       Statistic: Average
@@ -313,8 +312,8 @@ Resources:
         Fn::Join:
           - "-"
           - - high-cpu
-            - !Ref "EnvironmentName"
-            - !Ref "ServiceName"
+            - !Ref EnvironmentName
+            - !Ref ServiceName
       AlarmDescription:
         Fn::Join:
           - " "
@@ -326,7 +325,7 @@ Resources:
       Namespace: AWS/ECS
       Dimensions:
         - Name: ServiceName
-          Value: !Ref "ServiceName"
+          Value: !Ref ServiceName
         - Name: ClusterName
           Value: !Ref ECSClusterName
       Statistic: Average
