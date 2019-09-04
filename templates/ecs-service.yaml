@@ -76,6 +76,7 @@ Parameters:
     Description: How many copies of the service task to run
   Role:
     Type: String
+    Default: ""
     Description:
       (Optional) An IAM role to give the service's containers if the code within needs to
       access other AWS resources like S3 buckets, DynamoDB tables, etc
