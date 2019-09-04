@@ -13,7 +13,7 @@ The repo consists of three CloudFormation stacks:
 
 ![SampleArchitecture](./img/sample-architecture.png)
 
-This Architecture Example shows what this template will create, as well as additional services not yet included in this template. Those not yet included are RDS and Route53, and these will need to be configured manually at this time. An existing VPC with public and private subnets is a prerequisite to this set of templates.
+This Architecture Example shows what this template will create, as well as additional services not included in this template. The RDS connection will need to be configured manually at this time. An existing VPC with public and private subnets is a prerequisite to this set of templates. These templates are not nested and require manual updates to parameter files.
 
 ### Prerequisites
 
@@ -21,7 +21,9 @@ This Architecture Example shows what this template will create, as well as addit
 
 2. Determine the VPC in which you wish to deploy the Fargate service. If you would like some pointers for VPC planning and creation, check out [this repository](https://github.com/1Strategy/vpc-starter-template).
 
-3. Modify the Parameters file for each stack in `parameters/<aws region>` to match  AWS resources.
+3. Create/select a hosted zone and TLS certificate to use for this project.
+
+4. Modify the Parameters file for each stack in `parameters/<aws region>` to match  AWS resources.
 
 ## How to Deploy
 
